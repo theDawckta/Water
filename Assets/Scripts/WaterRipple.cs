@@ -46,11 +46,26 @@ public class WaterRipple : MonoBehaviour
         MakeField();
     }
 
+    void Start()
+    {
+        //fieldItems[1, 1].AddForce(new Vector3(50.0f, 50.0f, 0.0f));
+    }
+
     void Update()
     {
 		Fluid();
         Draw();
         timePassed = timePassed + Time.deltaTime;
+
+        if (timePassed > SplashInterval)
+        {
+            fieldItems[20, 35].AddForce(new Vector3(-SplashForce/2, SplashForce/5, 0.0f));
+            fieldItems[50, 35].AddForce(new Vector3(SplashForce/2, SplashForce/5, 0.0f));
+            fieldItems[35, 20].AddForce(new Vector3(0.0f, SplashForce/5, -SplashForce/2));
+            fieldItems[35, 50].AddForce(new Vector3(0.0f, SplashForce/5, SplashForce/2));
+            fieldItems[35, 35].AddForce(new Vector3(0.0f, SplashForce, 0.0f));
+            timePassed = 0.0f;
+        }
 
 		if(Input.touches.Length > 0)
         {
@@ -78,7 +93,10 @@ public class WaterRipple : MonoBehaviour
 		            FieldItem fieldItemHit = hit.transform.GetComponent<FieldItem>();
 					if((int)fieldItemHit.index.x != 0 && (int)fieldItemHit.index.x != XSize - 1 && (int)fieldItemHit.index.y != 0 && (int)fieldItemHit.index.y != ZSize - 1)
 					{
-						fieldItems[(int)fieldItemHit.index.x, (int)fieldItemHit.index.y].AddForce(SplashForce);
+                        //fieldItems[(int)fieldItemHit.index.x - 5, (int)fieldItemHit.index.y].AddForce(new Vector3(SplashForce, SplashForce, 0.0f));
+                        //fieldItems[(int)fieldItemHit.index.x + 5, (int)fieldItemHit.index.y].AddForce(new Vector3(-SplashForce, SplashForce, 0.0f));
+                        //fieldItems[(int)fieldItemHit.index.x, (int)fieldItemHit.index.y - 5].AddForce(new Vector3(0.0f, SplashForce, SplashForce));
+                        //fieldItems[(int)fieldItemHit.index.x, (int)fieldItemHit.index.y + 5].AddForce(new Vector3(0.0f, SplashForce, -SplashForce));
 					}
 		        }
 		}
@@ -90,8 +108,27 @@ public class WaterRipple : MonoBehaviour
         {
             for (int x = 1; x < XSize - 1; x++)
             {
+                float lDiff = 0;
+                float lForce = 0;
                 float hDiff = 0;
                 float hForce = 0;
+                float dDiff = 0;
+                float dForce = 0;
+
+                // influences of neighbours
+                lDiff = fieldItems[x - 1, z].length - fieldItems[x, z].length;
+                lForce += Damping * lDiff;
+                lDiff = fieldItems[x + 1, z].length - fieldItems[x, z].length;
+                lForce += Damping * lDiff;
+                lDiff = fieldItems[x, z - 1].length - fieldItems[x, z].length;
+                lForce += Damping * lDiff;
+                lDiff = fieldItems[x, z + 1].length - fieldItems[x, z].length;
+                lForce += Damping * lDiff;
+                // influence of normal waterlevel
+               lDiff = level - fieldItems[x, z].length;
+                lForce += Damping * lDiff;
+                // apply force and update
+
                 // influences of neighbours
                 hDiff = fieldItems[x - 1, z].height - fieldItems[x, z].height;
                 hForce += Damping * hDiff;
@@ -106,38 +143,52 @@ public class WaterRipple : MonoBehaviour
                 hForce += Damping * hDiff;
                 // apply force and update
 
-                fieldItems[x, z].AddForce(hForce);
+                // influences of neighbours
+                dDiff = fieldItems[x - 1, z].depth - fieldItems[x, z].depth;
+                dForce += Damping * dDiff;
+                dDiff = fieldItems[x + 1, z].depth - fieldItems[x, z].depth;
+                dForce += Damping * dDiff;
+                dDiff = fieldItems[x, z - 1].depth - fieldItems[x, z].depth;
+                dForce += Damping * dDiff;
+                dDiff = fieldItems[x, z + 1].depth - fieldItems[x, z].depth;
+                dForce += Damping * dDiff;
+                // influence of normal waterlevel
+              dDiff = level - fieldItems[x, z].depth;
+                dForce += Damping * dDiff;
+                // apply force and update
+
+                fieldItems[x, z].AddForce(new Vector3(lForce, hForce, dForce));
                 fieldItems[x, z].Update();
             }
         }
     }
 
-	void FluidFieldItems()
-    {
-        for (int z = 1; z < ZSize - 1; z++)
-        {
-            for (int x = 1; x < XSize - 1; x++)
-            {
-                float hDiff = 0;
-                float hForce = 0;
-                // influences of neighbours
-				hDiff = fieldItemLocations[x - 1, z].height - fieldItemLocations[x, z].height;
-                hForce += Damping * hDiff;
-				hDiff = fieldItemLocations[x + 1, z].height - fieldItemLocations[x, z].height;
-                hForce += Damping * hDiff;
-				hDiff = fieldItemLocations[x, z - 1].height - fieldItemLocations[x, z].height;
-                hForce += Damping * hDiff;
-				hDiff = fieldItemLocations[x, z + 1].height - fieldItemLocations[x, z].height;
-                hForce += Damping * hDiff;
-                // influence of normal waterlevel
-				hDiff = level - fieldItemLocations[x, z].height;
-                hForce += Damping * hDiff;
-                // apply force and update
-				fieldItemLocations[x, z].AddForce(hForce);
-				fieldItemLocations[x, z].Update();
-            }
-        }
-    }
+    //void FluidFieldItems()
+    //{
+    //    for (int z = 1; z < ZSize - 1; z++)
+    //    {
+    //        for (int x = 1; x < XSize - 1; x++)
+    //        {
+    //            float hDiff = 0;
+    //            float hForce = 0;
+    //            // influences of neighbours
+    //            hDiff = fieldItemLocations[x - 1, z].height - fieldItemLocations[x, z].height;
+    //            hForce += Damping * hDiff;
+    //            hDiff = fieldItemLocations[x + 1, z].height - fieldItemLocations[x, z].height;
+    //            hForce += Damping * hDiff;
+    //            hDiff = fieldItemLocations[x, z - 1].height - fieldItemLocations[x, z].height;
+    //            hForce += Damping * hDiff;
+    //            hDiff = fieldItemLocations[x, z + 1].height - fieldItemLocations[x, z].height;
+    //            hForce += Damping * hDiff;
+    //            // influence of normal waterlevel
+    //            hDiff = level - fieldItemLocations[x, z].height;
+    //            hForce += Damping * hDiff;
+    //            // apply force and update
+    //            fieldItemLocations[x, z].AddForce(hForce);
+    //            fieldItemLocations[x, z].Update();
+    //        }
+    //    }
+    //}
 
 
     void Draw()
@@ -149,11 +200,7 @@ public class WaterRipple : MonoBehaviour
         {
             for (y = 0; y < ZSize; y++)
             {
-            	
-                Vector3 newPosition = new Vector3(fieldItems[x, y].transform.localPosition.x,
-                                                    fieldItems[x, y].height,
-					fieldItems[x, y].transform.localPosition.z);
-					fieldItems[x, y].transform.localPosition = newPosition;
+                fieldItems[x, y].transform.localPosition = fieldItems[x, y].location;
 
 
 //				Vector3 newPosition = new Vector3(fieldItemLocations[x, y].location.x,
@@ -165,12 +212,42 @@ public class WaterRipple : MonoBehaviour
 
     }
 
+    //void CheckForSplash()
+    //{
+    //    RaycastHit[] splashHit;
+
+    //    foreach (GameObject disturber in SurfaceDisturbance)
+    //    {
+    //        splashHit = Physics.RaycastAll(disturber.transform.position, Vector3.down, 10.0f);
+
+    //        for (int i = 0; i < splashHit.Length; i++)
+    //        {
+    //            if (splashHit[i].transform.name == (FieldItem.name + "(Clone)"))
+    //            {
+    //                int x;
+    //                int y;
+
+    //                for (x = 0; x < XSize; x++)
+    //                {
+    //                    for (y = 0; y < ZSize; y++)
+    //                    {
+    //                        if (fieldItems[x, y] == splashHit[i].transform.GetComponent<FieldItem>())
+    //                        {
+    //                            SplashAtPoint(x, y);
+    //                        }
+    //                    }
+    //                }
+    //            }
+    //        }
+    //    }
+    //}
+
     void RandomSplash()
     {
-        int randomX = Random.Range(1, XSize - 1);
-        int randomY = Random.Range(1, ZSize - 1);
+        //int randomX = Random.Range(1, XSize - 1);
+        //int randomY = Random.Range(1, ZSize - 1);
 
-        fieldItems[randomX, randomY].AddForce(SplashForce);
+        //fieldItems[randomX, randomY].AddForce(SplashForce);
 
 //		fieldItemLocations[randomX, randomY].AddForce(SplashForce);    
 	}
@@ -238,6 +315,9 @@ public class WaterRipple : MonoBehaviour
 					fieldItems[x, z].transform.position = new Vector3(fieldItems[x, z].transform.position.x - fieldCenter.x,
                                                                  fieldItems[x, z].transform.position.y - fieldCenter.y,
                                                                  fieldItems[x, z].transform.position.z - fieldCenter.z);
+
+                    fieldItems[x, z].OriginalLocation = fieldItems[x, z].transform.position;
+
             	
 //				fieldItemLocations[x, z].location = new Vector3(fieldItemLocations[x, z].location.x - fieldCenter.x,
 //																  fieldItemLocations[x, z].location.y - fieldCenter.y,
