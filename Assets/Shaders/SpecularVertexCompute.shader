@@ -1,4 +1,6 @@
-﻿Shader "Tutorial/SpecularVertexCompute"
+﻿// Upgrade NOTE: replaced '_World2Object' with 'unity_WorldToObject'
+
+Shader "Tutorial/SpecularVertexCompute"
 {
 	Properties
 	{
@@ -39,7 +41,7 @@
 				vertOutput o;
 				
 				float4 normal = float4(buf_Normals[id], 0.0);
-				float3 n = normalize(mul(normal, _World2Object));
+				float3 n = normalize(mul(normal, unity_WorldToObject));
 				float3 l = normalize(_WorldSpaceLightPos0);
 				float3 v = normalize(_WorldSpaceCameraPos);
 
