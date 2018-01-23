@@ -1,27 +1,29 @@
 ﻿using UnityEngine;
 using System.Collections;
 
-public class FieldItem : MonoBehaviour {
-
-    [HideInInspector]
-	public float height; 
-	[HideInInspector]
-    public Vector3 location = Vector3.zero;
-	[HideInInspector]
-    public Vector2 index;
-    public float MaxHeight;
-    public float SpeedDampening;
-    float speed;
+public class FieldItem
+{
+	public float Height; 
+    public Vector3 Position = Vector3.zero;
+    public Vector2 Index;
+    public float MaxHeight = 50.0f;
+    public float SpeedDampening = 0.85f;
+    public float Speed;
+    
+    public FieldItem(Vector3 position)
+    {
+        Position = position;
+    }
 
     public void AddForce(float force)
     {
-        speed += force;
+        Speed += force;
     }
 
-    public void Update()
+    public void UpdateFieldItem()
     {
-        height = Mathf.Clamp(height + speed, -MaxHeight, MaxHeight);
-        location = new Vector3(location.x, height, location.z);
-		speed *= SpeedDampening;
+        Height = Mathf.Clamp(Height + Speed, -MaxHeight, MaxHeight);
+        Position = new Vector3(Position.x, Height, Position.z);
+		Speed *= SpeedDampening;
     }
 }
