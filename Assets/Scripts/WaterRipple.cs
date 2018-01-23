@@ -4,6 +4,8 @@ using System.Collections.Generic;
 
 public class WaterRipple : MonoBehaviour
 {
+    private ParticleSystem _waterParticleSystem;
+    ParticleSystem.Particle[] _waterParticles;
 
     [Header("X")]
     public int XSize = 5;
@@ -27,13 +29,29 @@ public class WaterRipple : MonoBehaviour
 
     float level = 0.0f;
 
-
-
 	public Mesh mesh;
-    public Material waterMaterial;
 
     void Awake()
     {
+        // A simple particle material with no texture.
+        Material particleMaterial = new Material(Shader.Find("Particles/Alpha Blended Premultiply"));
+        _waterParticles = new ParticleSystem.Particle[XSize * ZSize];
+    // Create a particle system.
+    var go = new GameObject("Particle System");
+        _waterParticleSystem = go.AddComponent<ParticleSystem>();
+        _waterParticleSystem.transform.position = new Vector3(0.0f, 70.0f, 0.0f);
+        ParticleSystem.MainModule main =  _waterParticleSystem.main;
+        main.maxParticles = XSize * ZSize;
+        main.startSpeed = 0.0f;
+        main.startLifetime = Mathf.Infinity;
+
+        ParticleSystem.EmissionModule emission = _waterParticleSystem.emission;
+        emission.rateOverTime = XSize * ZSize;
+
+        go.GetComponent<ParticleSystemRenderer>().material = particleMaterial;
+        _waterParticleSystem.Emit(XSize * ZSize);
+
+
         fieldItems = new FieldItem[XSize, ZSize];
 		fieldItemLocations = new FieldItem[XSize, ZSize];
 		for (int x = 0; x < XSize; x++)
@@ -112,36 +130,10 @@ public class WaterRipple : MonoBehaviour
         }
     }
 
-	void FluidFieldItems()
-    {
-        for (int z = 1; z < ZSize - 1; z++)
-        {
-            for (int x = 1; x < XSize - 1; x++)
-            {
-                float hDiff = 0;
-                float hForce = 0;
-                // influences of neighbours
-				hDiff = fieldItemLocations[x - 1, z].height - fieldItemLocations[x, z].height;
-                hForce += Damping * hDiff;
-				hDiff = fieldItemLocations[x + 1, z].height - fieldItemLocations[x, z].height;
-                hForce += Damping * hDiff;
-				hDiff = fieldItemLocations[x, z - 1].height - fieldItemLocations[x, z].height;
-                hForce += Damping * hDiff;
-				hDiff = fieldItemLocations[x, z + 1].height - fieldItemLocations[x, z].height;
-                hForce += Damping * hDiff;
-                // influence of normal waterlevel
-				hDiff = level - fieldItemLocations[x, z].height;
-                hForce += Damping * hDiff;
-                // apply force and update
-				fieldItemLocations[x, z].AddForce(hForce);
-				fieldItemLocations[x, z].Update();
-            }
-        }
-    }
-
-
     void Draw()
     {
+        int fieldSize = _waterParticleSystem.GetParticles(_waterParticles);
+        int particleIndex = 0;
         int x;
         int y;
 
@@ -155,14 +147,13 @@ public class WaterRipple : MonoBehaviour
 					fieldItems[x, y].transform.localPosition.z);
 					fieldItems[x, y].transform.localPosition = newPosition;
 
-
-//				Vector3 newPosition = new Vector3(fieldItemLocations[x, y].location.x,
-//                                                  fieldItemLocations[x, y].height,
-//												  fieldItemLocations[x, y].location.z);
-//				Graphics.DrawMesh(mesh, newPosition, Quaternion.identity, material, 0);
+                
+                _waterParticles[particleIndex].position = fieldItems[x, y].transform.position;
+                particleIndex = particleIndex + 1;
             }
         }
-
+        Debug.Log(fieldSize);
+        _waterParticleSystem.SetParticles(_waterParticles, fieldSize);
     }
 
     void RandomSplash()
@@ -217,7 +208,6 @@ public class WaterRipple : MonoBehaviour
                 fieldItemLocations[x, z].location = position ;
 
                 GameObject fieldItem = (GameObject)Instantiate(MyFieldItem, position, transform.rotation);
-               	fieldItem.GetComponent<Renderer>().material = waterMaterial;
 
                 fieldItems[x, z] = fieldItem.GetComponent<FieldItem>();
                 fieldItems[x, z].index = new Vector2(x, z);
