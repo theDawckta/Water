@@ -10,9 +10,10 @@ public class FieldItem
     public float SpeedDampening = 0.85f;
     public float Speed;
     
-    public FieldItem(Vector3 position)
+    public FieldItem(Vector3 position, float maxHeight)
     {
         Position = position;
+        MaxHeight = maxHeight;
     }
 
     public void AddForce(float force)

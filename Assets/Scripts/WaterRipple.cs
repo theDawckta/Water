@@ -6,6 +6,11 @@ public class WaterRipple : MonoBehaviour
 {
     private ParticleSystem _waterParticleSystem;
     ParticleSystem.Particle[] _waterParticles;
+    public Mesh WaterCubeMesh;
+    public Material WaterMaterial;
+    
+    public List<AudioSource> Clips = new List<AudioSource>();
+    private int _clipIndex = 0;
 
     [Header("X")]
     public int XSize = 5;
@@ -18,14 +23,17 @@ public class WaterRipple : MonoBehaviour
 
     [Header("Water")]
     public float Damping = 0.07f;
-    public float SplashForce = 0.5f;
-    public float SplashInterval = 0.2f;
-
-    public GameObject MyFieldItem;
+    public float SplashForceDrip = 0.5f;
+    public float SplashForceMouse = 3.0f;
+    public float MaxSplashHeight = 5.0f;
+    public float SplashRadius = 1.0f;
+    
     private FieldItem[,] fieldItems;
 	//private FieldItem[,] fieldItemLocations;
     private Vector3 fieldCenter = new Vector3();
     private float timePassed = 0.0f;
+    private BoxCollider surfaceBoxCollider;
+    private float _buttonDownStartTime;
 
     float level = 0.0f;
 
@@ -33,13 +41,14 @@ public class WaterRipple : MonoBehaviour
 
     void Awake()
     {
-        // A simple particle material with no texture.
-        Material particleMaterial = new Material(Shader.Find("Particles/Alpha Blended Premultiply"));
+        Application.targetFrameRate = 60;
         _waterParticles = new ParticleSystem.Particle[XSize * ZSize];
-        // Create a particle system.
         var go = new GameObject("Particle System");
         _waterParticleSystem = go.AddComponent<ParticleSystem>();
-        _waterParticleSystem.transform.position = new Vector3(0.0f, 70.0f, 0.0f);
+        _waterParticleSystem.transform.position = new Vector3(0.0f, 0.0f, 0.0f);
+        surfaceBoxCollider = _waterParticleSystem.gameObject.AddComponent<BoxCollider>();
+        surfaceBoxCollider.size = new Vector3(XSize, 0.1f, ZSize);
+
         ParticleSystem.MainModule main =  _waterParticleSystem.main;
         main.maxParticles = XSize * ZSize;
         main.startSpeed = 0.0f;
@@ -50,9 +59,13 @@ public class WaterRipple : MonoBehaviour
         emission.rateOverTime = XSize * ZSize;
 
         ParticleSystemRenderer renderer = _waterParticleSystem.GetComponent<ParticleSystemRenderer>();
-        renderer.renderMode = ParticleSystemRenderMode.HorizontalBillboard;
-
-        go.GetComponent<ParticleSystemRenderer>().material = particleMaterial;
+        renderer.renderMode = ParticleSystemRenderMode.Mesh;
+        renderer.mesh = WaterCubeMesh;
+        renderer.material = WaterMaterial;
+        renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        renderer.receiveShadows = false;
+        renderer.alignment = ParticleSystemRenderSpace.World;
+        
         _waterParticleSystem.Emit(XSize * ZSize);
 
 
@@ -60,7 +73,7 @@ public class WaterRipple : MonoBehaviour
 		//fieldItemLocations = new FieldItem[XSize, ZSize];
         MakeField();
 
-        InvokeRepeating("RandomSplash", 3.0f, 0.02f);
+        InvokeRepeating("RandomSplash", 0.0f, 1.00f);
     }
 
     void Update()
@@ -69,36 +82,47 @@ public class WaterRipple : MonoBehaviour
         Draw();
         timePassed = timePassed + Time.deltaTime;
 
-		if(Input.touches.Length > 0)
-        {
-        	foreach(Touch touch in Input.touches)
-        	{
-				RaycastHit hit;
-        		Ray ray = Camera.main.ScreenPointToRay(touch.position);
-        
-		        if (Physics.Raycast(ray, out hit)) {
-		            Transform objectHit = hit.transform;
-		            
-		            // Do something with the object that was hit by the raycast.
-		        }
-        	}
-        }
-
 		if(Input.GetMouseButton(0))
 		{
-			//RaycastHit hit;
-   //     		Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-        
-		 //       if (Physics.Raycast(ray, out hit)) 
-		 //       {
-		 //           Transform objectHit = hit.transform;
-		 //           FieldItem fieldItemHit = hit.transform.GetComponent<FieldItem>();
-			//		if((int)fieldItemHit.Index.x != 0 && (int)fieldItemHit.Index.x != XSize - 1 && (int)fieldItemHit.Index.y != 0 && (int)fieldItemHit.Index.y != ZSize - 1)
-			//		{
-			//			fieldItems[(int)fieldItemHit.Index.x, (int)fieldItemHit.Index.y].AddForce(SplashForce);
-			//		}
-		 //       }
-		}
+            RaycastHit hit;
+            Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+
+            if (Physics.Raycast(ray, out hit))
+            {
+                Bounds b = new Bounds(hit.point, new Vector3(SplashRadius, SplashRadius, SplashRadius));
+
+                for (int z = 1; z < ZSize - 1; z++)
+                {
+                    for (int x = 1; x < XSize - 1; x++)
+                    {
+                        if (b.Contains(new Vector3(fieldItems[x, z].Position.x, 0.0f, fieldItems[x, z].Position.z)))
+                        {
+                            fieldItems[x, z].AddForce(SplashForceMouse);
+                        }
+                    }
+                }
+            }
+        }
+
+        if (Input.GetMouseButtonDown(0))
+        {
+            _buttonDownStartTime = Time.time;
+            Clips[_clipIndex].Play();
+        }
+
+        if (Input.GetMouseButtonUp(0))
+        {
+            Clips[_clipIndex].Stop();
+            if ((Time.time - _buttonDownStartTime) > Clips[_clipIndex].clip.length)
+                NextClip();
+        }
+    }
+
+    void NextClip()
+    {
+        _clipIndex = _clipIndex + 1;
+        if (_clipIndex >= Clips.Count)
+            _clipIndex = 0;
     }
 
     void Fluid()
@@ -122,7 +146,6 @@ public class WaterRipple : MonoBehaviour
                 hDiff = level - fieldItems[x, z].Height;
                 hForce += Damping * hDiff;
                 // apply force and update
-
                 fieldItems[x, z].AddForce(hForce);
                 fieldItems[x, z].UpdateFieldItem();
             }
@@ -142,8 +165,8 @@ public class WaterRipple : MonoBehaviour
             {
             	
                 Vector3 newPosition = new Vector3(fieldItems[x, y].Position.x,
-                                                    fieldItems[x, y].Height,
-					fieldItems[x, y].Position.z);
+                                                  fieldItems[x, y].Height,
+					                              fieldItems[x, y].Position.z);
 
                 fieldItems[x, y].Position = newPosition;
 
@@ -161,9 +184,7 @@ public class WaterRipple : MonoBehaviour
         int randomX = Random.Range(1, XSize - 1);
         int randomY = Random.Range(1, ZSize - 1);
 
-        fieldItems[randomX, randomY].AddForce(SplashForce);
-
-//		fieldItemLocations[randomX, randomY].AddForce(SplashForce);    
+        fieldItems[randomX, randomY].AddForce(SplashForceDrip);   
 	}
 
     private void MakeField()
@@ -205,9 +226,7 @@ public class WaterRipple : MonoBehaviour
                                         1.0f,
                                         z + transform.localScale.z + currentZOffset + currentXLineOffset + transform.position.z);
 
-                //fieldItemLocations[x, z].Position = position;
-
-                FieldItem fieldItem = new FieldItem(position);
+                FieldItem fieldItem = new FieldItem(position, MaxSplashHeight);
 
                 fieldItems[x, z] = fieldItem;
                 fieldItems[x, z].Index = new Vector2(x, z);
@@ -215,7 +234,6 @@ public class WaterRipple : MonoBehaviour
                 if ((x == XSize / 2 || XSize == 1) && (z == ZSize / 2 || ZSize == 1))
                 {
                     fieldCenter = fieldItems[x, z].Position;
-                    //					fieldCenter = fieldItemLocations[x, z].location;
                 }
             }
         }
@@ -227,10 +245,6 @@ public class WaterRipple : MonoBehaviour
                 fieldItems[x, z].Position = new Vector3(fieldItems[x, z].Position.x - fieldCenter.x,
                                                              fieldItems[x, z].Position.y - fieldCenter.y,
                                                              fieldItems[x, z].Position.z - fieldCenter.z);
-
-                //				fieldItemLocations[x, z].location = new Vector3(fieldItemLocations[x, z].location.x - fieldCenter.x,
-                //																  fieldItemLocations[x, z].location.y - fieldCenter.y,
-                //																  fieldItemLocations[x, z].location.z - fieldCenter.z);
             }
         }
 
