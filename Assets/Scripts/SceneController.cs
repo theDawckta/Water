@@ -2,7 +2,8 @@
 using UnityEngine.SceneManagement;
 using System.Collections;
 
-public class SceneController : MonoBehaviour {
+public class SceneController : MonoBehaviour 
+{
 
 	// Update is called once per frame
 	void Update () 

@@ -44,9 +44,9 @@ public class WaterRipple : MonoBehaviour
         Application.targetFrameRate = 60;
         _waterParticles = new ParticleSystem.Particle[XSize * ZSize];
         var go = new GameObject("Particle System");
+        go.transform.SetParent(transform, false);
         _waterParticleSystem = go.AddComponent<ParticleSystem>();
-        _waterParticleSystem.transform.position = new Vector3(0.0f, 0.0f, 0.0f);
-        surfaceBoxCollider = _waterParticleSystem.gameObject.AddComponent<BoxCollider>();
+        surfaceBoxCollider = go.AddComponent<BoxCollider>();
         surfaceBoxCollider.size = new Vector3(XSize, 0.1f, ZSize);
 
         ParticleSystem.MainModule main =  _waterParticleSystem.main;
@@ -73,7 +73,7 @@ public class WaterRipple : MonoBehaviour
 		//fieldItemLocations = new FieldItem[XSize, ZSize];
         MakeField();
 
-        InvokeRepeating("RandomSplash", 0.0f, 1.00f);
+        //InvokeRepeating("RandomSplash", 0.0f, 0.05f);
     }
 
     void Update()
@@ -95,7 +95,7 @@ public class WaterRipple : MonoBehaviour
                 {
                     for (int x = 1; x < XSize - 1; x++)
                     {
-                        if (b.Contains(new Vector3(fieldItems[x, z].Position.x, 0.0f, fieldItems[x, z].Position.z)))
+                        if (b.Contains(new Vector3(fieldItems[x, z].Position.x + transform.position.x, 0.0f, fieldItems[x, z].Position.z + transform.position.z)))
                         {
                             fieldItems[x, z].AddForce(SplashForceMouse);
                         }
@@ -104,18 +104,18 @@ public class WaterRipple : MonoBehaviour
             }
         }
 
-        if (Input.GetMouseButtonDown(0))
-        {
-            _buttonDownStartTime = Time.time;
-            Clips[_clipIndex].Play();
-        }
+        //if (Input.GetMouseButtonDown(0))
+        //{
+        //    _buttonDownStartTime = Time.time;
+        //    Clips[_clipIndex].Play();
+        //}
 
-        if (Input.GetMouseButtonUp(0))
-        {
-            Clips[_clipIndex].Stop();
-            if ((Time.time - _buttonDownStartTime) > Clips[_clipIndex].clip.length)
-                NextClip();
-        }
+        //if (Input.GetMouseButtonUp(0))
+        //{
+        //    Clips[_clipIndex].Stop();
+        //    if ((Time.time - _buttonDownStartTime) > Clips[_clipIndex].clip.length)
+        //        NextClip();
+        //}
     }
 
     void NextClip()
@@ -247,7 +247,5 @@ public class WaterRipple : MonoBehaviour
                                                              fieldItems[x, z].Position.z - fieldCenter.z);
             }
         }
-
-        fieldCenter = new Vector3(0, 0, 0);
     }
 }
