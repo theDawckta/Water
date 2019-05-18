@@ -48,6 +48,7 @@ public class WaterRipple : MonoBehaviour
         _waterParticleSystem = go.AddComponent<ParticleSystem>();
         surfaceBoxCollider = go.AddComponent<BoxCollider>();
         surfaceBoxCollider.size = new Vector3(XSize, 0.1f, ZSize);
+        surfaceBoxCollider.center = Vector3.zero;
 
         ParticleSystem.MainModule main =  _waterParticleSystem.main;
         main.maxParticles = XSize * ZSize;
@@ -204,23 +205,14 @@ public class WaterRipple : MonoBehaviour
                 currentZOffset = ZItemOffset * z;
 
                 if (x % 2 == 0)
-                {
                     currentXLineOffset = 0;
-                }
                 else
-                {
                     currentXLineOffset = XLineOffset;
-                }
 
                 if (z % 2 == 0)
-                {
                     currentZLineOffset = 0;
-                }
-
                 else
-                {
                     currentZLineOffset = ZLineOffset;
-                }
 
                 position = new Vector3(x + transform.localScale.x + currentXOffset + currentZLineOffset + transform.position.x,
                                         1.0f,

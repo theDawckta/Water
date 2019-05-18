@@ -13,7 +13,6 @@ public class HexFieldPerlinCompute : MonoBehaviour {
 	public int zSize = 20;
 	public float zItemOffset = 0;
 	public float zLineOffset = 0;
-	public int cornerCut = 10;
 	
 	private Vector3[] fieldItemPosition;
 	private bool playerFlattened = false;
@@ -34,6 +33,7 @@ public class HexFieldPerlinCompute : MonoBehaviour {
 	private ComputeBuffer bufferPoints;
 	private ComputeBuffer bufferNormals;
 	private ComputeBuffer bufferPos;
+    private Vector2 direction;
 
 	void Awake () 
 	{
@@ -42,7 +42,27 @@ public class HexFieldPerlinCompute : MonoBehaviour {
 		MakeField ();
 	}
 
-	private void MakeField()
+    void Update()
+    {
+        if (direction == null)
+            return;
+
+        float y;
+
+        for (int i = 0; i < fieldCount; i++)
+        {
+            y = heightScale1 * Mathf.PerlinNoise(Math.Sign(direction.x) * (Time.time * timeScale1) + (fieldItemPosition[i].x * scale1), Math.Sign(direction.y) * (Time.time * timeScale1) + (fieldItemPosition[i].z * scale1));
+            //y = y + heightScale2 * Mathf.PerlinNoise(Time.time * timeScale2 + (fieldItemPosition[i].x * scale2), Time.time * timeScale2 + (fieldItemPosition[i].z * scale2));
+            fieldItemPosition[i] = new Vector3(fieldItemPosition[i].x, y + yOffset, fieldItemPosition[i].z);
+        }
+    }
+
+    public void UpdateDirection(Vector2 newDirection)
+    {
+        direction = direction + newDirection;
+    }
+
+    private void MakeField()
 	{
 		var verts = GetTriangleVertices(aMesh);
 		vertexCount = verts.Length;
@@ -67,8 +87,6 @@ public class HexFieldPerlinCompute : MonoBehaviour {
 		float currentXLineOffset = 0;
 		float currentZLineOffset = 0;
 
-		int cornerCutIterator = cornerCut;
-
 		Vector3 position;
 		
 		Vector3[] tempFieldItemPosition = new Vector3[xSize * zSize];
@@ -76,57 +94,41 @@ public class HexFieldPerlinCompute : MonoBehaviour {
 		int count = 0;
 		for (int x = 1; x <= xSize; x++) 
 		{
-			if(x == xSize - cornerCut )
-			{
-				cornerCutIterator = 0;
-			}
-			else if(x > xSize - cornerCut)
-			{
-				cornerCutIterator = cornerCutIterator + 1;
-			}
-			else if(x < cornerCut)
-			{
-				cornerCutIterator = cornerCutIterator - 1;
-			}
 			for (int z = 1; z <= zSize; z++) 
 			{
-				
-				if(z > cornerCutIterator && z < zSize - cornerCutIterator)
+				currentXOffset = xItemOffset * x;
+				currentZOffset = zItemOffset * z;
+					
+				if(x % 2 == 0)
 				{
-					currentXOffset = xItemOffset * x;
-					currentZOffset = zItemOffset * z;
+					currentXLineOffset = 0;
+				}
+				else
+				{
+					currentXLineOffset = xLineOffset;
+				}
 					
-					if(x % 2 == 0)
-					{
-						currentXLineOffset = 0;
-					}
-					else
-					{
-						currentXLineOffset = xLineOffset;
-					}
+				if(z % 2 == 0)
+				{
+					currentZLineOffset = 0;
+				}
 					
-					if(z % 2 == 0)
-					{
-						currentZLineOffset = 0;
-					}
+				else
+				{
+					currentZLineOffset = zLineOffset;
+				}
 					
-					else
-					{
-						currentZLineOffset = zLineOffset;
-					}
+				position = new Vector3 (x + transform.localScale.x + currentXOffset + currentZLineOffset + transform.position.x, 
+					                    yOffset, 
+					                    z + transform.localScale.z + currentZOffset + currentXLineOffset + transform.position.z);
 					
-					position = new Vector3 (x + transform.localScale.x + currentXOffset + currentZLineOffset + transform.position.x, 
-					                        yOffset, 
-					                        z + transform.localScale.z + currentZOffset + currentXLineOffset + transform.position.z);
+				tempFieldItemPosition[count] = position;
+				count++;
 					
-					tempFieldItemPosition[count] = position;
-					count++;
-					
-					if((x == xSize / 2 || xSize == 1)
-					   && (z == zSize / 2 || zSize == 1))
-					{
-						fieldCenter = position;
-					}
+				if((x == xSize / 2 || xSize == 1)
+					&& (z == zSize / 2 || zSize == 1))
+				{
+					fieldCenter = position;
 				}
 			}
 		}
@@ -148,24 +150,12 @@ public class HexFieldPerlinCompute : MonoBehaviour {
 		fieldCenter = new Vector3(0, 0, 0);
 		fieldCount = fieldItemPosition.Length;
 	}
-	
-	void Update() 
-	{
-		float y;
-
-        for (int i = 0; i < fieldCount; i++)
-		{
-			y = heightScale1 * Mathf.PerlinNoise(Time.time * timeScale1 + (fieldItemPosition[i].x * scale1), Time.time * timeScale1 + (fieldItemPosition[i].z * scale1));
-			y = y + heightScale2 * Mathf.PerlinNoise(Time.time * timeScale2 + (fieldItemPosition[i].x * scale2), Time.time * timeScale2 + (fieldItemPosition[i].z * scale2));
-			fieldItemPosition[i] = new Vector3(fieldItemPosition[i].x,y + yOffset,fieldItemPosition[i].z);
-		}
-	}
 
 	// called if script attached to the camera, after all regular rendering is done
 	void OnPostRender () {
 		bufferPos.SetData (fieldItemPosition);
 		aMaterial.SetPass (0);
-		Graphics.DrawProcedural (MeshTopology.Triangles, vertexCount, xSize * zSize);
+		Graphics.DrawProceduralNow (MeshTopology.Triangles, vertexCount, xSize * zSize);
 	}
 
 	Vector3[] GetTriangleVertices(Mesh aMesh)
