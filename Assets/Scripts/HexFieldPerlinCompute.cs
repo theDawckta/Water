@@ -44,9 +44,8 @@ public class HexFieldPerlinCompute : MonoBehaviour {
 
     void Update()
     {
-        if (direction == null)
-            return;
-
+        if (Input.GetKey(KeyCode.W))
+            direction = direction + Vector2.up;
         float y;
 
         for (int i = 0; i < fieldCount; i++)
