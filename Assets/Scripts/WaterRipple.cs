@@ -29,7 +29,6 @@ public class WaterRipple : MonoBehaviour
     public float SplashRadius = 1.0f;
     
     private FieldItem[,] fieldItems;
-	//private FieldItem[,] fieldItemLocations;
     private Vector3 fieldCenter = new Vector3();
     private float timePassed = 0.0f;
     private BoxCollider surfaceBoxCollider;
@@ -71,10 +70,9 @@ public class WaterRipple : MonoBehaviour
 
 
         fieldItems = new FieldItem[XSize, ZSize];
-		//fieldItemLocations = new FieldItem[XSize, ZSize];
         MakeField();
 
-        //InvokeRepeating("RandomSplash", 0.0f, 0.05f);
+        InvokeRepeating("RandomSplash", 0.0f, 0.05f);
     }
 
     void Update()
@@ -105,18 +103,18 @@ public class WaterRipple : MonoBehaviour
             }
         }
 
-        //if (Input.GetMouseButtonDown(0))
-        //{
-        //    _buttonDownStartTime = Time.time;
-        //    Clips[_clipIndex].Play();
-        //}
+        if (Input.GetMouseButtonDown(0))
+        {
+            _buttonDownStartTime = Time.time;
+            Clips[_clipIndex].Play();
+        }
 
-        //if (Input.GetMouseButtonUp(0))
-        //{
-        //    Clips[_clipIndex].Stop();
-        //    if ((Time.time - _buttonDownStartTime) > Clips[_clipIndex].clip.length)
-        //        NextClip();
-        //}
+        if (Input.GetMouseButtonUp(0))
+        {
+            Clips[_clipIndex].Stop();
+            if ((Time.time - _buttonDownStartTime) > Clips[_clipIndex].clip.length)
+                NextClip();
+        }
     }
 
     void NextClip()
